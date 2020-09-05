@@ -13,12 +13,13 @@ namespace BoardAndBarber.Controllers
     [ApiController]
     public class CustomersController : ControllerBase
     {
+        [HttpPost]
         public IActionResult CreateCustomer(Customer customer)
         {
             var repo = new CustomerRepository();
             repo.Add(customer);
 
-
+            return Created($"/api/customers/{customer.Id}", customer);
         }
 
     }
