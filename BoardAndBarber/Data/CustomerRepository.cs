@@ -38,17 +38,6 @@ namespace BoardAndBarber.Data
             var newId = (int) cmd.ExecuteScalar();
 
             customerToAdd.Id = newId;
-
-            //int newId = 1;
-            //if (_customers.Count > 0)
-            //{
-            //    //get the next id by finding the max current id
-            //    newId = _customers.Select(customer => customer.Id).Max() + 1;
-            //}
-
-            //
-
-            //_customers.Add(customerToAdd);
         }
 
         public List<Customer> GetAll()
@@ -110,21 +99,56 @@ namespace BoardAndBarber.Data
 
         public Customer Update(int id, Customer customer)
         {
-            var customerToUpdate = GetById(id);
+            var sql = @"UPDATE [dbo].[Customers]
+                          SET [Name] = @name
+                             ,[Birthday] = @birthday
+                             ,[FavoriteBarber] = @favoritebarber
+                             ,[Notes] = @notes
+                        Output inserted.*
+                        WHERE id = @id";
 
-            customerToUpdate.Birthday = customer.Birthday;
-            customerToUpdate.FavoriteBarber = customer.FavoriteBarber;
-            customerToUpdate.Name = customer.Name;
-            customerToUpdate.Notes = customer.Notes;
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
 
-            return customerToUpdate;
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = sql;
+
+            cmd.Parameters.AddWithValue("name", customer.Name);
+            cmd.Parameters.AddWithValue("birthday", customer.Birthday);
+            cmd.Parameters.AddWithValue("favoritebarber", customer.FavoriteBarber);
+            cmd.Parameters.AddWithValue("notes", customer.Notes);
+            cmd.Parameters.AddWithValue("id", id);
+
+            var reader = cmd.ExecuteReader();
+
+            if(reader.Read())
+            {
+                return MapToCustomer(reader);
+            }
+
+            return null;
         }
 
         public void Remove(int id)
         {
-            var customerToDelete = GetById(id);
+            var sql = @"DELETE 
+                        FROM [dbo].[Customers]
+                        WHERE Id = @id";
 
-            _customers.Remove(customerToDelete);
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = sql;
+
+            cmd.Parameters.AddWithValue("id", id);
+
+            var rows = cmd.ExecuteNonQuery();
+
+            if(rows != 1)
+            {
+                //do something becuase that's bad
+            }
         }
 
         Customer MapToCustomer(SqlDataReader reader)
