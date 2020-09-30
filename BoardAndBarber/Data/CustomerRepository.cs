@@ -11,34 +11,68 @@ namespace BoardAndBarber.Data
     {
         static List<Customer> _customers = new List<Customer>();
 
+        const string _connectionString = "Server = localhost; Database = BoardAndBarber; Trusted_Connection = True;";
+
         public void Add(Customer customerToAdd)
         {
-            int newId = 1;
-            if (_customers.Count > 0)
-            {
-                //get the next id by finding the max current id
-                newId = _customers.Select(customer => customer.Id).Max() + 1;
-            }
+            var sql = @"INSERT INTO [dbo].[Customers]
+                               ([Name]
+                               ,[Birthday]
+                               ,[FavoriteBarber]
+                               ,[Notes])
+                         Output inserted.Id
+                         VALUES
+                               (@name, @birthday, @favoritebarber, @notes)";
+
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = sql;
+
+            cmd.Parameters.AddWithValue("name", customerToAdd.Name);
+            cmd.Parameters.AddWithValue("birthday", customerToAdd.Birthday);
+            cmd.Parameters.AddWithValue("favoritebarber", customerToAdd.FavoriteBarber);
+            cmd.Parameters.AddWithValue("notes", customerToAdd.Notes);
+
+            var newId = (int) cmd.ExecuteScalar();
 
             customerToAdd.Id = newId;
-
-            _customers.Add(customerToAdd);
         }
 
         public List<Customer> GetAll()
         {
-            return _customers;
+            using var connection = new SqlConnection(_connectionString);
+
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            var sql = @"select * from Customers";
+
+            command.CommandText = sql;
+
+            var reader = command.ExecuteReader();
+            var customers = new List<Customer>();
+
+            while(reader.Read())
+            {
+                var customer = MapToCustomer(reader);
+                customers.Add(customer);
+            }
+
+            return customers;
         }
 
         public Customer GetById(int id)
         {
-            var connection = new SqlConnection("Server = localhost; Database = BoardAndBarber; Trusted_Connection = True;");
+            using var connection = new SqlConnection(_connectionString);
+
             connection.Open();
 
             var command = connection.CreateCommand();
             var query = $@"select *
-                          from Customers
-                          where id = {id}";
+                      from Customers
+                      where id = {id}";
 
             command.CommandText = query;
 
@@ -55,15 +89,7 @@ namespace BoardAndBarber.Data
 
             if (reader.Read())
             {
-                var customerFromDb = new Customer();
-                //do something
-                customerFromDb.Id = (int) reader["Id"]; //explicit conversion/cast, throws exception on failure
-                customerFromDb.Name = reader["Name"] as string; // implicit cast/conversion, returns a null on failure
-                customerFromDb.Birthday = DateTime.Parse(reader["Birthday"].ToString()); //parsing
-                customerFromDb.FavoriteBarber = reader["FavoriteBarber"].ToString(); //make it a string
-                customerFromDb.Notes = reader["Notes"].ToString();
-
-                return customerFromDb;
+                return MapToCustomer(reader);
             }
             else
             {
@@ -73,21 +99,69 @@ namespace BoardAndBarber.Data
 
         public Customer Update(int id, Customer customer)
         {
-            var customerToUpdate = GetById(id);
+            var sql = @"UPDATE [dbo].[Customers]
+                          SET [Name] = @name
+                             ,[Birthday] = @birthday
+                             ,[FavoriteBarber] = @favoritebarber
+                             ,[Notes] = @notes
+                        Output inserted.*
+                        WHERE id = @id";
 
-            customerToUpdate.Birthday = customer.Birthday;
-            customerToUpdate.FavoriteBarber = customer.FavoriteBarber;
-            customerToUpdate.Name = customer.Name;
-            customerToUpdate.Notes = customer.Notes;
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
 
-            return customerToUpdate;
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = sql;
+
+            cmd.Parameters.AddWithValue("name", customer.Name);
+            cmd.Parameters.AddWithValue("birthday", customer.Birthday);
+            cmd.Parameters.AddWithValue("favoritebarber", customer.FavoriteBarber);
+            cmd.Parameters.AddWithValue("notes", customer.Notes);
+            cmd.Parameters.AddWithValue("id", id);
+
+            var reader = cmd.ExecuteReader();
+
+            if(reader.Read())
+            {
+                return MapToCustomer(reader);
+            }
+
+            return null;
         }
 
         public void Remove(int id)
         {
-            var customerToDelete = GetById(id);
+            var sql = @"DELETE 
+                        FROM [dbo].[Customers]
+                        WHERE Id = @id";
 
-            _customers.Remove(customerToDelete);
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = sql;
+
+            cmd.Parameters.AddWithValue("id", id);
+
+            var rows = cmd.ExecuteNonQuery();
+
+            if(rows != 1)
+            {
+                //do something becuase that's bad
+            }
+        }
+
+        Customer MapToCustomer(SqlDataReader reader)
+        {
+            var customerFromDb = new Customer();
+            //do something with one result
+            customerFromDb.Id = (int)reader["Id"]; //explicit conversion/cast, throws exception on failure
+            customerFromDb.Name = reader["Name"] as string; // implicit cast/conversion, returns a null on failure
+            customerFromDb.Birthday = DateTime.Parse(reader["Birthday"].ToString()); //parsing
+            customerFromDb.FavoriteBarber = reader["FavoriteBarber"].ToString(); //make it a string
+            customerFromDb.Notes = reader["Notes"].ToString();
+
+            return customerFromDb;
         }
     }
 }
