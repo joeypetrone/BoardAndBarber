@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
+using Dapper;
 
 namespace BoardAndBarber.Data
 {
@@ -35,66 +36,34 @@ namespace BoardAndBarber.Data
             cmd.Parameters.AddWithValue("favoritebarber", customerToAdd.FavoriteBarber);
             cmd.Parameters.AddWithValue("notes", customerToAdd.Notes);
 
+            //run this query, and only return the top row's leftmost column
             var newId = (int) cmd.ExecuteScalar();
 
             customerToAdd.Id = newId;
         }
 
-        public List<Customer> GetAll()
+        public IEnumerable<Customer> GetAll()
         {
-            using var connection = new SqlConnection(_connectionString);
+            using var db = new SqlConnection(_connectionString);
 
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            var sql = @"select * from Customers";
-
-            command.CommandText = sql;
-
-            var reader = command.ExecuteReader();
-            var customers = new List<Customer>();
-
-            while(reader.Read())
-            {
-                var customer = MapToCustomer(reader);
-                customers.Add(customer);
-            }
+            var customers = db.Query<Customer>("select * from Customers");
 
             return customers;
         }
 
-        public Customer GetById(int id)
+        public Customer GetById(int customerId)
         {
-            using var connection = new SqlConnection(_connectionString);
+            using var db = new SqlConnection(_connectionString);
 
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            var query = $@"select *
+            var query = @"select *
                       from Customers
-                      where id = {id}";
+                      where id = @cid";
 
-            command.CommandText = query;
+            var parameters = new { cid = customerId };
 
-            //run this query, and i don't care about the results
-            //command.ExecuteNonQuery();
+            var customer = db.QueryFirstOrDefault<Customer>(query, parameters);
 
-            //run this query, and only return the top row's leftmost column
-            //command.ExecuteScalar();
-
-            //run this query and give me the results one row at a time
-            var reader = command.ExecuteReader();
-            //sql server has executed the command and is waiting to give us results
-            //reader.Read(); <-- boolean value based on if data was found in database
-
-            if (reader.Read())
-            {
-                return MapToCustomer(reader);
-            }
-            else
-            {
-                return null;
-            }
+            return customer;
         }
 
         public Customer Update(int id, Customer customer)
