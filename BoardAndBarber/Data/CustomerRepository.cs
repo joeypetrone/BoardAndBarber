@@ -24,7 +24,7 @@ namespace BoardAndBarber.Data
                          Output inserted.Id
                          VALUES
                                (@name, @birthday, @favoritebarber, @notes)";
-
+        
             using var db = new SqlConnection(_connectionString);
 
             var newId = db.ExecuteScalar<int>(sql, customerToAdd);
