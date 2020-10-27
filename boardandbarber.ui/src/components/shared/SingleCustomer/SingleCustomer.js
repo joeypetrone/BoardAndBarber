@@ -1,22 +1,21 @@
-import React from 'react';
-
-import "./SingleCustomer.scss"
+import React from "react";
+import "./SingleCustomer.scss";
 
 class SingleCustomer extends React.Component {
-  render() {
-
-    return (
-      <>
-        <strong>{this.props.name}</strong>
-          <ul>
-            <li>Id: {this.props.id}</li>
-            <li>Birthday: {this.props.birthday}</li>
-            <li>Favorite Barber: {this.props.Name}</li>
-            <li>Notes: {this.props.Name}</li>
-          </ul>
-      </>
-    )
-  }
+    render() {
+        const {customer} = this.props;
+        return (
+            <>
+            <strong>{customer.name}</strong>
+                <ul>
+                    <li>Id: {customer.id} </li>
+                    <li>Birthday: {customer.birthday} </li>
+                    <li>Favorite Barber: {customer.favoriteBarber} </li>
+                    <li>Notes: {customer.notes} </li>
+                </ul>
+            </>
+        )
+    }
 }
 
 export default SingleCustomer;
