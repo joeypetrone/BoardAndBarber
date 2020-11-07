@@ -5,14 +5,17 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Dapper;
+using Microsoft.Extensions.Configuration;
 
 namespace BoardAndBarber.Data
 {
     public class CustomerRepository
     {
-        static List<Customer> _customers = new List<Customer>();
-
-        const string _connectionString = "Server = localhost; Database = BoardAndBarber; Trusted_Connection = True;";
+        readonly string _connectionString;
+        public CustomerRepository(IConfiguration configuration)
+        {
+            _connectionString = configuration.GetConnectionString("BoardAndBarber");
+        }
 
         public void Add(Customer customerToAdd)
         {
@@ -36,9 +39,25 @@ namespace BoardAndBarber.Data
         {
             using var db = new SqlConnection(_connectionString);
 
-            var customers = db.Query<Customer>("select * from Customers");
+            try
+            {
+                var customers = db.Query<Customer>("select * from Customers");
 
-            return customers;
+                return customers;
+            }
+            catch (SqlException)
+            {
+                Console.WriteLine("Sql is broken");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+            finally
+            {
+                Console.WriteLine("GetAll was called");
+            }
         }
 
         public Customer GetById(int customerId)
